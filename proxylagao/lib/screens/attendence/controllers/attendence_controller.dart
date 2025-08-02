@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/subject_model.dart';
+import '../../../services/attendance_service.dart';
+import '../../../services/supabase_service.dart';
 import '../../../sample_data.dart';
 
 class AttendanceController extends ChangeNotifier {
@@ -7,66 +9,148 @@ class AttendanceController extends ChangeNotifier {
   List<Subject> _subjects = [];
   double _minimumThreshold = 75.0;
   int _selectedNavIndex = 0;
+  bool _isLoading = false;
+  String? _userId;
 
   // Getters
   List<Subject> get subjects => _subjects;
   double get minimumThreshold => _minimumThreshold;
   int get selectedNavIndex => _selectedNavIndex;
+  bool get isLoading => _isLoading;
 
   // Constructor - initialize with sample data
   AttendanceController() {
-    _loadSampleData();
+    _initialize();
   }
 
-  // Load sample data (simulate database fetch)
+  // Initialize controller
+  Future<void> _initialize() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Get current user ID (or use default for demo)
+      final user = SupabaseService.auth.currentUser;
+      if (user != null) {
+        _userId = user.id;
+      } else {
+        // Use a default user ID for demo purposes when login is disabled
+        _userId = 'demo-user-123';
+        debugPrint('Using demo user ID: $_userId');
+      }
+      
+      // Load user settings
+      try {
+        _minimumThreshold = await AttendanceService.getAttendanceThreshold(_userId!);
+      } catch (e) {
+        debugPrint('Error loading attendance threshold: $e');
+        _minimumThreshold = 75.0; // Default threshold
+      }
+      
+      // Load subjects from Supabase
+      try {
+        await loadSubjects();
+      } catch (e) {
+        debugPrint('Error loading subjects: $e');
+        _loadSampleData();
+      }
+    } catch (e) {
+      debugPrint('Error initializing attendance controller: $e');
+      _loadSampleData();
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // Load subjects from Supabase
+  Future<void> loadSubjects() async {
+    if (_userId == null) return;
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      _subjects = await AttendanceService.getSubjects(_userId!);
+    } catch (e) {
+      debugPrint('Error loading subjects: $e');
+      _loadSampleData();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Load sample data (fallback)
   void _loadSampleData() {
     _subjects = List.from(SampleData.subjects);
     notifyListeners();
   }
 
   // Update minimum attendance threshold
-  void updateThreshold(double newThreshold) {
+  Future<void> updateThreshold(double newThreshold) async {
     _minimumThreshold = newThreshold;
     notifyListeners();
+
+    if (_userId != null) {
+      try {
+        await AttendanceService.updateAttendanceThreshold(_userId!, newThreshold);
+      } catch (e) {
+        debugPrint('Error updating threshold: $e');
+      }
+    }
   }
 
   // Add new subject
-  void addSubject(String name, int attendedLectures, int totalLectures) {
-    final newSubject = Subject(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: name,
-      attendedLectures: attendedLectures,
-      totalLectures: totalLectures,
-    );
-    
-    _subjects.add(newSubject);
-    notifyListeners();
-    
-    // TODO: In future, sync with Supabase
-    // await _supabaseService.addSubject(newSubject);
+  Future<void> addSubject(String name, int attendedLectures, int totalLectures) async {
+    if (_userId == null) return;
+
+    try {
+      await AttendanceService.addSubject(_userId!, name, attendedLectures, totalLectures);
+      
+      // Reload subjects to get the updated list
+      await loadSubjects();
+    } catch (e) {
+      debugPrint('Error adding subject: $e');
+      rethrow;
+    }
   }
 
   // Mark attendance as present
-  void markPresent(String subjectId) {
-    final subjectIndex = _subjects.indexWhere((s) => s.id == subjectId);
-    if (subjectIndex != -1) {
-      _subjects[subjectIndex].markPresent();
-      notifyListeners();
+  Future<void> markPresent(String subjectId) async {
+    if (_userId == null) return;
+
+    try {
+      await AttendanceService.markAttendance(_userId!, subjectId, 'present');
       
-      // TODO: In future, sync with Supabase
-      // await _supabaseService.updateSubject(_subjects[subjectIndex]);
+      // Update local state
+      final subjectIndex = _subjects.indexWhere((s) => s.id == subjectId);
+      if (subjectIndex != -1) {
+        _subjects[subjectIndex].markPresent();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error marking present: $e');
+      rethrow;
     }
   }
 
   // Mark attendance as absent
-  void markAbsent(String subjectId) {
-    final subjectIndex = _subjects.indexWhere((s) => s.id == subjectId);
-    if (subjectIndex != -1) {
-      _subjects[subjectIndex].markAbsent();
-      notifyListeners();
+  Future<void> markAbsent(String subjectId) async {
+    if (_userId == null) return;
+
+    try {
+      await AttendanceService.markAttendance(_userId!, subjectId, 'absent');
       
-      // TODO: In future, sync with Supabase
-      // await _supabaseService.updateSubject(_subjects[subjectIndex]);
+      // Update local state
+      final subjectIndex = _subjects.indexWhere((s) => s.id == subjectId);
+      if (subjectIndex != -1) {
+        _subjects[subjectIndex].markAbsent();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error marking absent: $e');
+      rethrow;
     }
   }
 
@@ -77,32 +161,46 @@ class AttendanceController extends ChangeNotifier {
   }
 
   // Remove subject
-  void removeSubject(String subjectId) {
-    _subjects.removeWhere((s) => s.id == subjectId);
-    notifyListeners();
-    
-    // TODO: In future, sync with Supabase
-    // await _supabaseService.deleteSubject(subjectId);
+  Future<void> removeSubject(String subjectId) async {
+    try {
+      await AttendanceService.deleteSubject(subjectId);
+      
+      // Update local state
+      _subjects.removeWhere((s) => s.id == subjectId);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error removing subject: $e');
+      rethrow;
+    }
   }
 
   // Update subject details
-  void updateSubject(String subjectId, {
+  Future<void> updateSubject(String subjectId, {
     String? name,
     int? attendedLectures,
     int? totalLectures,
-  }) {
-    final subjectIndex = _subjects.indexWhere((s) => s.id == subjectId);
-    if (subjectIndex != -1) {
-      final subject = _subjects[subjectIndex];
-      _subjects[subjectIndex] = subject.copyWith(
+  }) async {
+    try {
+      await AttendanceService.updateSubject(subjectId,
         name: name,
         attendedLectures: attendedLectures,
         totalLectures: totalLectures,
       );
-      notifyListeners();
       
-      // TODO: In future, sync with Supabase
-      // await _supabaseService.updateSubject(_subjects[subjectIndex]);
+      // Update local state
+      final subjectIndex = _subjects.indexWhere((s) => s.id == subjectId);
+      if (subjectIndex != -1) {
+        final subject = _subjects[subjectIndex];
+        _subjects[subjectIndex] = subject.copyWith(
+          name: name,
+          attendedLectures: attendedLectures,
+          totalLectures: totalLectures,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error updating subject: $e');
+      rethrow;
     }
   }
 
@@ -136,20 +234,8 @@ class AttendanceController extends ChangeNotifier {
     return (totalAttended / totalLectures) * 100;
   }
 
-  // Future methods for Supabase integration
-  /*
-  Future<void> syncWithSupabase() async {
-    // Fetch subjects from Supabase
-    final subjects = await _supabaseService.fetchSubjects();
-    _subjects = subjects;
-    notifyListeners();
+  // Refresh data
+  Future<void> refresh() async {
+    await loadSubjects();
   }
-
-  Future<void> backupToSupabase() async {
-    // Backup current subjects to Supabase
-    for (final subject in _subjects) {
-      await _supabaseService.upsertSubject(subject);
-    }
-  }
-  */
 }

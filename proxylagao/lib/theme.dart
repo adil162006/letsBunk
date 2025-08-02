@@ -7,6 +7,7 @@ class AppTheme {
   static const Color primaryColor = Color(0xFF2F27CE);
   static const Color secondaryColor = Color(0xFFDEDCFF);
   static const Color accentColor = Color(0xFF433BFF);
+  static const Color cardBackgroundColor = Color(0xFF1F2937);
   
   // Additional colors for attendance status
   static const Color goodAttendance = Colors.green;
@@ -99,6 +100,26 @@ class AppTheme {
         color: textColor,
         fontSize: 12,
       ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: primaryColor, width: 2),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     ),
   );
 }

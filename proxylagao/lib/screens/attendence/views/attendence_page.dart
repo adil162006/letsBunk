@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../controllers/attendence_controller.dart';
 import '../models/subject_model.dart';
 import '../../../theme.dart';
@@ -11,7 +12,6 @@ class AttendancePage extends StatefulWidget {
 }
 
 class _AttendancePageState extends State<AttendancePage> with TickerProviderStateMixin {
-  late AttendanceController _controller;
   final TextEditingController _subjectNameController = TextEditingController();
   final TextEditingController _attendedController = TextEditingController();
   final TextEditingController _totalController = TextEditingController();
@@ -22,10 +22,6 @@ class _AttendancePageState extends State<AttendancePage> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _controller = AttendanceController();
-    _controller.addListener(() {
-      if (mounted) setState(() {});
-    });
     
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -43,7 +39,6 @@ class _AttendancePageState extends State<AttendancePage> with TickerProviderStat
 
   @override
   void dispose() {
-    _controller.dispose();
     _subjectNameController.dispose();
     _attendedController.dispose();
     _totalController.dispose();
@@ -54,42 +49,44 @@ class _AttendancePageState extends State<AttendancePage> with TickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF8F9FF),
-              Color(0xFFE8EAFF),
-              Color(0xFFF0F2FF),
-            ],
+    return Consumer<AttendanceController>(
+      builder: (context, controller, child) {
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundColor,
+          body: SafeArea(
+            child: Column(
+              children: [
+                _buildAppBar(),
+                Expanded(child: _buildBody(controller)),
+              ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildAppBar(),
-              Expanded(child: _buildBody()),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: _buildFloatingActionButton(),
+          floatingActionButton: _buildFloatingActionButton(),
+        );
+      },
     );
   }
 
   Widget _buildAppBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppTheme.primaryColor, Color(0xFF433BFF)],
+              gradient: LinearGradient(
+                colors: [AppTheme.primaryColor, AppTheme.primaryColor.withValues(alpha: 0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -103,7 +100,7 @@ class _AttendancePageState extends State<AttendancePage> with TickerProviderStat
               ],
             ),
             child: const Icon(
-              Icons.school_rounded,
+              Icons.school,
               color: Colors.white,
               size: 24,
             ),
@@ -113,38 +110,29 @@ class _AttendancePageState extends State<AttendancePage> with TickerProviderStat
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Attendance Tracker',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  style: TextStyle(
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textColor,
                   ),
                 ),
                 Text(
-                  'Monitor your academic progress',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                  'Manage your subjects and attendance',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textColor.withValues(alpha: 0.7),
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              onPressed: _showSettingsDialog,
-              icon: const Icon(Icons.settings_rounded),
-              color: AppTheme.primaryColor,
+          IconButton(
+            onPressed: () => _showAddSubjectDialog(),
+            icon: Icon(
+              Icons.add,
+              color: AppTheme.textColor,
             ),
           ),
         ],
@@ -152,277 +140,434 @@ class _AttendancePageState extends State<AttendancePage> with TickerProviderStat
     );
   }
 
-  Widget _buildBody() {
-    if (_controller.subjects.isEmpty) {
-      return FadeTransition(
-        opacity: _fadeController,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryColor.withValues(alpha: 0.1),
-                        AppTheme.accentColor.withValues(alpha: 0.1),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Icon(
-                    Icons.school_outlined,
-                    size: 64,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'No subjects added yet',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textColor,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Start tracking your attendance by adding your first subject',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _showAddSubjectBottomSheet,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.add_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Add First Subject',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+  Widget _buildBody(AttendanceController controller) {
+    if (controller.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: AppTheme.primaryColor,
         ),
       );
     }
 
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0, 0.3),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: _slideController,
-        curve: Curves.easeOutCubic,
-      )),
-      child: FadeTransition(
-        opacity: _fadeController,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          itemCount: _controller.subjects.length,
-          itemBuilder: (context, index) {
-            final subject = _controller.subjects[index];
-            return _buildSubjectCard(subject, index);
-          },
+    return RefreshIndicator(
+      onRefresh: () => controller.refresh(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSummaryCard(controller),
+            const SizedBox(height: 24),
+            _buildSubjectsList(controller),
+            // Add bottom padding to prevent overflow with bottom navigation
+            const SizedBox(height: 100),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSubjectCard(Subject subject, int index) {
-    final percentage = subject.attendancePercentage;
-    final meetsThreshold = subject.meetsThreshold(_controller.minimumThreshold);
-    
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 300 + (index * 100)),
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: meetsThreshold
-                ? [
-                    Colors.white,
-                    Color(0xFFE8F5E8),
-                  ]
-                : [
-                    Colors.white,
-                    Color(0xFFFFF5F5),
-                  ],
+  Widget _buildSummaryCard(AttendanceController controller) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryColor,
+            AppTheme.primaryColor.withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Overall Attendance',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '${controller.overallAttendancePercentage.toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  'Attended',
+                  controller.subjects.fold(0, (sum, s) => sum + s.attendedLectures).toString(),
+                  Icons.check_circle,
+                  Colors.green,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatItem(
+                  'Total',
+                  controller.subjects.fold(0, (sum, s) => sum + s.totalLectures).toString(),
+                  Icons.schedule,
+                  Colors.blue,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildStatItem(
+                  'Subjects',
+                  controller.subjects.length.toString(),
+                  Icons.book,
+                  Colors.orange,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubjectsList(AttendanceController controller) {
+    if (controller.subjects.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.school_outlined,
+              size: 64,
+              color: AppTheme.textColor.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No subjects added yet',
+              style: TextStyle(
+                fontSize: 18,
+                color: AppTheme.textColor.withValues(alpha: 0.5),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap the + button to add your first subject',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textColor.withValues(alpha: 0.4),
+              ),
             ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Subjects (${controller.subjects.length})',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textColor,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddSubjectDialog(),
+              icon: const Icon(Icons.add, color: AppTheme.primaryColor),
+              label: const Text(
+                'Add Subject',
+                style: TextStyle(color: AppTheme.primaryColor),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: controller.subjects.length,
+          itemBuilder: (context, index) {
+            final subject = controller.subjects[index];
+            return _buildSubjectCard(subject, controller);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubjectCard(Subject subject, AttendanceController controller) {
+    final percentage = subject.attendancePercentage;
+    final isGoodAttendance = subject.meetsThreshold(controller.minimumThreshold);
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subject.name,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${subject.attendedLectures} / ${subject.totalLectures} lectures',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textColor.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isGoodAttendance ? Colors.green : Colors.orange,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${percentage.toStringAsFixed(1)}%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(
+                          isGoodAttendance ? Icons.check_circle : Icons.warning,
+                          color: isGoodAttendance ? Colors.green : Colors.orange,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isGoodAttendance ? 'Good' : 'Below Threshold',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isGoodAttendance ? Colors.green : Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _markAttendance(subject.id, 'present'),
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Present'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _markAttendance(subject.id, 'absent'),
+                    icon: const Icon(Icons.close, size: 16),
+                    label: const Text('Absent'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => _showEditSubjectDialog(subject),
+                  icon: const Icon(Icons.edit, color: AppTheme.primaryColor),
+                ),
+                IconButton(
+                  onPressed: () => _showDeleteSubjectDialog(subject),
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton() {
+    return FloatingActionButton(
+      onPressed: () => _showAddSubjectDialog(),
+      backgroundColor: AppTheme.primaryColor,
+      child: const Icon(Icons.add, color: Colors.white),
+    );
+  }
+
+  // Dialog Methods
+  void _showAddSubjectDialog() {
+    _subjectNameController.clear();
+    _attendedController.clear();
+    _totalController.clear();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Subject'),
+        content: Form(
+          key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              TextFormField(
+                controller: _subjectNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Subject Name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter subject name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: meetsThreshold
-                            ? [AppTheme.goodAttendance, Color(0xFF4CAF50)]
-                            : [AppTheme.poorAttendance, Color(0xFFF44336)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  Expanded(
+                    child: TextFormField(
+                      controller: _attendedController,
+                      decoration: const InputDecoration(
+                        labelText: 'Attended',
+                        border: OutlineInputBorder(),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      meetsThreshold ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-                      color: Colors.white,
-                      size: 20,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Invalid number';
+                        }
+                        return null;
+                      },
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          subject.name,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${subject.attendedLectures} of ${subject.totalLectures} lectures',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: meetsThreshold
-                            ? [AppTheme.goodAttendance, Color(0xFF4CAF50)]
-                            : [AppTheme.poorAttendance, Color(0xFFF44336)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                    child: TextFormField(
+                      controller: _totalController,
+                      decoration: const InputDecoration(
+                        labelText: 'Total',
+                        border: OutlineInputBorder(),
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (meetsThreshold ? AppTheme.goodAttendance : AppTheme.poorAttendance)
-                              .withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      '${percentage.toStringAsFixed(1)}%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              LinearProgressIndicator(
-                value: percentage / 100,
-                backgroundColor: Colors.grey[200],
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  meetsThreshold ? AppTheme.goodAttendance : AppTheme.poorAttendance,
-                ),
-                minHeight: 8,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Expanded(
-                    child: _buildActionButton(
-                      onPressed: () => _controller.markPresent(subject.id),
-                      icon: Icons.check_circle_rounded,
-                      label: 'Present',
-                      color: AppTheme.goodAttendance,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF4CAF50), Color(0xFF66BB6A)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionButton(
-                      onPressed: () => _controller.markAbsent(subject.id),
-                      icon: Icons.cancel_rounded,
-                      label: 'Absent',
-                      color: AppTheme.poorAttendance,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFF44336), Color(0xFFEF5350)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Invalid number';
+                        }
+                        return null;
+                      },
                     ),
                   ),
                 ],
@@ -430,533 +575,189 @@ class _AttendancePageState extends State<AttendancePage> with TickerProviderStat
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required VoidCallback onPressed,
-    required IconData icon,
-    required String label,
-    required Color color,
-    required Gradient gradient,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: gradient,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                final controller = context.read<AttendanceController>();
+                final navigator = Navigator.of(context);
+                await controller.addSubject(
+                  _subjectNameController.text,
+                  int.parse(_attendedController.text),
+                  int.parse(_totalController.text),
+                );
+                if (mounted) {
+                  navigator.pop();
+                }
+              }
+            },
+            child: const Text('Add'),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Column(
-              children: [
-                Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryColor, AppTheme.accentColor],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.4),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: FloatingActionButton(
-        onPressed: _showAddSubjectBottomSheet,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: const Icon(
-          Icons.add_rounded,
-          color: Colors.white,
-          size: 28,
-        ),
-      ),
-    );
-  }
-
-
-
-  void _showSettingsDialog() {
-    double tempThreshold = _controller.minimumThreshold;
+  void _showEditSubjectDialog(Subject subject) {
+    _subjectNameController.text = subject.name;
+    _attendedController.text = subject.attendedLectures.toString();
+    _totalController.text = subject.totalLectures.toString();
     
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Subject'),
+        content: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _subjectNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Subject Name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter subject name';
+                  }
+                  return null;
+                },
               ),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Colors.white, Color(0xFFF8F9FF)],
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _attendedController,
+                      decoration: const InputDecoration(
+                        labelText: 'Attended',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Invalid number';
+                        }
+                        return null;
+                      },
+                    ),
                   ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.settings_rounded,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            'Settings',
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textColor,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Minimum Attendance Threshold',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textColor,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _totalController,
+                      decoration: const InputDecoration(
+                        labelText: 'Total',
+                        border: OutlineInputBorder(),
                       ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Required';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Invalid number';
+                        }
+                        return null;
+                      },
                     ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primaryColor.withValues(alpha: 0.1),
-                            AppTheme.accentColor.withValues(alpha: 0.1),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${tempThreshold.toStringAsFixed(0)}%',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          color: AppTheme.primaryColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: AppTheme.primaryColor,
-                        inactiveTrackColor: Colors.grey[300],
-                        thumbColor: AppTheme.primaryColor,
-                        overlayColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-                        trackHeight: 4,
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-                      ),
-                      child: Slider(
-                        value: tempThreshold,
-                        min: 0,
-                        max: 100,
-                        divisions: 20,
-                        onChanged: (value) {
-                          setDialogState(() {
-                            tempThreshold = value;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Subjects below this percentage will be highlighted in red.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  _controller.updateThreshold(tempThreshold);
-                                  Navigator.of(context).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Threshold updated to ${tempThreshold.toStringAsFixed(0)}%'),
-                                      backgroundColor: AppTheme.primaryColor,
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(8),
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 12),
-                                  child: Text(
-                                    'Save',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showAddSubjectBottomSheet() {
-    _subjectNameController.clear();
-    _attendedController.clear();
-    _totalController.clear();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
-        return Container(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
+            ],
           ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        'Add New Subject',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textColor,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      _buildFormField(
-                        controller: _subjectNameController,
-                        label: 'Subject Name',
-                        icon: Icons.book_rounded,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter subject name';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildFormField(
-                        controller: _attendedController,
-                        label: 'Attended Lectures',
-                        icon: Icons.check_circle_outline_rounded,
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter attended lectures';
-                          }
-                          final attended = int.tryParse(value);
-                          if (attended == null || attended < 0) {
-                            return 'Please enter a valid number';
-                          }
-                          final total = int.tryParse(_totalController.text);
-                          if (total != null && attended > total) {
-                            return 'Attended cannot be more than total';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      _buildFormField(
-                        controller: _totalController,
-                        label: 'Total Lectures',
-                        icon: Icons.format_list_numbered_rounded,
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter total lectures';
-                          }
-                          final total = int.tryParse(value);
-                          if (total == null || total <= 0) {
-                            return 'Please enter a valid number greater than 0';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      SizedBox(
-                        width: double.infinity,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primaryColor.withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _addSubject,
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.save_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Save Subject',
-                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                final controller = context.read<AttendanceController>();
+                final navigator = Navigator.of(context);
+                await controller.updateSubject(
+                  subject.id,
+                  name: _subjectNameController.text,
+                  attendedLectures: int.parse(_attendedController.text),
+                  totalLectures: int.parse(_totalController.text),
+                );
+                if (mounted) {
+                  navigator.pop();
+                }
+              }
+            },
+            child: const Text('Update'),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildFormField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppTheme.primaryColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.poorAttendance, width: 2),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppTheme.poorAttendance, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ],
       ),
-      validator: validator,
     );
   }
 
-  void _addSubject() {
-    if (_formKey.currentState?.validate() ?? false) {
-      final name = _subjectNameController.text.trim();
-      final attended = int.parse(_attendedController.text);
-      final total = int.parse(_totalController.text);
-
-      _controller.addSubject(name, attended, total);
-      Navigator.of(context).pop();
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$name added successfully'),
-          backgroundColor: AppTheme.primaryColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+  void _showDeleteSubjectDialog(Subject subject) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Subject'),
+        content: Text('Are you sure you want to delete "${subject.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-        ),
-      );
+          ElevatedButton(
+            onPressed: () async {
+              final controller = context.read<AttendanceController>();
+              final navigator = Navigator.of(context);
+              await controller.removeSubject(subject.id);
+              if (mounted) {
+                navigator.pop();
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _markAttendance(String subjectId, String status) async {
+    try {
+      final controller = context.read<AttendanceController>();
+      if (status == 'present') {
+        await controller.markPresent(subjectId);
+      } else {
+        await controller.markAbsent(subjectId);
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Marked as ${status == 'present' ? 'present' : 'absent'}'),
+            backgroundColor: status == 'present' ? Colors.green : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

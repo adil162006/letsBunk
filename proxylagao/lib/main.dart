@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/attendence/views/attendence_page.dart';
-import 'modules/summary/view/summary_screen.dart';
 import 'modules/summary/controller/summary_controller.dart';
 import 'modules/timetable/controller/timetable_controller.dart';
-import 'modules/timetable/view/timetable_screen.dart';
+import 'screens/attendence/controllers/attendence_controller.dart';
+import 'services/supabase_service.dart';
+import 'services/auth_service.dart';
+import 'screens/auth/auth_wrapper.dart';
 import 'theme.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    // Initialize Supabase
+    await SupabaseService.initialize();
+    
+    // Test connection
+    final connectionTest = await SupabaseService.testConnection();
+    if (!connectionTest) {
+      debugPrint('Warning: Supabase connection test failed');
+    }
+    
+    runApp(const MyApp());
+  } catch (e) {
+    debugPrint('Error during app initialization: $e');
+    // Still run the app even if Supabase fails
+    runApp(const MyApp());
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -18,107 +36,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => SummaryController()),
         ChangeNotifierProvider(create: (_) => TimetableController()),
+        ChangeNotifierProvider(create: (_) => AttendanceController()),
       ],
       child: MaterialApp(
         title: 'AppSprint',
         theme: AppTheme.lightTheme,
-        home: const MainNavigationPage(),
+        home: const AuthWrapper(),
         debugShowCheckedModeBanner: false,
-      ),
-    );
-  }
-}
-
-class MainNavigationPage extends StatefulWidget {
-  const MainNavigationPage({super.key});
-
-  @override
-  State<MainNavigationPage> createState() => _MainNavigationPageState();
-}
-
-class _MainNavigationPageState extends State<MainNavigationPage> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const AttendancePage(),
-    const SummaryScreen(), // Using our new SummaryScreen
-    const TimetableScreen(), // Using the actual TimetableScreen
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.textColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home_rounded, 'Home', 0),
-                _buildNavItem(Icons.dashboard_rounded, 'Dashboard', 1),
-                _buildNavItem(Icons.schedule_rounded, 'Timetable', 2),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, int index) {
-    final isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () => _onItemTapped(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey[400],
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey[400],
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

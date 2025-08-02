@@ -33,7 +33,7 @@ class Subject {
     totalLectures++;
   }
 
-  // Convert to JSON (for future Supabase integration)
+  // Convert to JSON (for Supabase integration)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -43,7 +43,7 @@ class Subject {
     };
   }
 
-  // Create from JSON (for future Supabase integration)
+  // Create from JSON (for Supabase integration)
   factory Subject.fromJson(Map<String, dynamic> json) {
     return Subject(
       id: json['id'] ?? '',
