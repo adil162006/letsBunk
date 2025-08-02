@@ -232,7 +232,7 @@ class _CreateTimetableScreenState extends State<CreateTimetableScreen> {
                               value: subject,
                               child: Text(subject, style: const TextStyle(color: Color(0xFFF9FAFB))),
                             );
-                          }).toList(),
+                          }),
                         ],
                         onChanged: (value) {
                           _subjectControllers[dayIndex][subjectIndex].text = value ?? '';
@@ -250,21 +250,21 @@ class _CreateTimetableScreenState extends State<CreateTimetableScreen> {
   }
 
   IconData _getDayIcon(String day) {
-    switch (day) {
-      case 'Monday':
-        return Icons.monday;
-      case 'Tuesday':
-        return Icons.tuesday;
-      case 'Wednesday':
-        return Icons.wednesday;
-      case 'Thursday':
-        return Icons.thursday;
-      case 'Friday':
-        return Icons.friday;
-      case 'Saturday':
-        return Icons.saturday;
-      case 'Sunday':
-        return Icons.sunday;
+    switch (day.toLowerCase()) {
+      case 'monday':
+        return Icons.calendar_today;
+      case 'tuesday':
+        return Icons.calendar_today;
+      case 'wednesday':
+        return Icons.calendar_today;
+      case 'thursday':
+        return Icons.calendar_today;
+      case 'friday':
+        return Icons.calendar_today;
+      case 'saturday':
+        return Icons.weekend;
+      case 'sunday':
+        return Icons.weekend;
       default:
         return Icons.calendar_today;
     }

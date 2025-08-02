@@ -56,14 +56,15 @@ class _SummaryScreenState extends State<SummaryScreen> {
             );
           }
 
-          return Column(
-            children: [
-              // Attendance Summary Card
-              AttendanceSummaryCard(controller: controller),
-              
-              // Additional content can be added here
-              Expanded(
-                child: Container(
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 100), // Add padding for bottom navigation
+            child: Column(
+              children: [
+                // Attendance Summary Card
+                AttendanceSummaryCard(controller: controller),
+                
+                // Additional content can be added here
+                Container(
                   margin: const EdgeInsets.all(16),
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -120,12 +121,11 @@ class _SummaryScreenState extends State<SummaryScreen> {
                     ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -163,39 +163,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
     showDialog(
       context: context,
       builder: (context) => ThresholdDialog(controller: context.read<SummaryController>()),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      backgroundColor: const Color(0xFF1F2937),
-      selectedItemColor: const Color(0xFFF59E0B),
-      unselectedItemColor: const Color(0xFF93C5FD),
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: 'Dashboard',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.schedule),
-          label: 'Timetable',
-        ),
-      ],
-      currentIndex: 1, // Dashboard is selected
-      onTap: (index) {
-        // Handle navigation
-        if (index == 0) {
-          // Navigate to Home
-        } else if (index == 2) {
-          // Navigate to Timetable
-        }
-        // index == 1 is current screen (Dashboard)
-      },
     );
   }
 } 

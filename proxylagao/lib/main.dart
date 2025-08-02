@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'screens/attendence/views/attendence_page.dart';
-import 'screens/summary/views/summary_page.dart';
+import 'modules/summary/view/summary_screen.dart';
+import 'modules/summary/controller/summary_controller.dart';
+import 'modules/timetable/controller/timetable_controller.dart';
+import 'modules/timetable/view/timetable_screen.dart';
 import 'theme.dart';
 
 void main() {
@@ -12,11 +16,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AppSprint',
-      theme: AppTheme.lightTheme,
-      home: const MainNavigationPage(),
-      debugShowCheckedModeBanner: false,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SummaryController()),
+        ChangeNotifierProvider(create: (_) => TimetableController()),
+      ],
+      child: MaterialApp(
+        title: 'AppSprint',
+        theme: AppTheme.lightTheme,
+        home: const MainNavigationPage(),
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }
@@ -33,8 +43,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   final List<Widget> _pages = [
     const AttendancePage(),
-    const SummaryPage(),
-    const PlaceholderPage(), // Placeholder for Timetable
+    const SummaryScreen(), // Using our new SummaryScreen
+    const TimetableScreen(), // Using the actual TimetableScreen
   ];
 
   void _onItemTapped(int index) {
@@ -108,58 +118,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// Placeholder page for Timetable (to be implemented later)
-class PlaceholderPage extends StatelessWidget {
-  const PlaceholderPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primaryColor, AppTheme.accentColor],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Icon(
-                  Icons.schedule_rounded,
-                  size: 64,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Timetable',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textColor,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Coming Soon!',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

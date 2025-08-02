@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controller/timetable_controller.dart';
+import '../model/timetable_day_model.dart';
 import '../widgets/today_schedule_card.dart';
 import '../widgets/day_edit_dialog.dart';
+import 'create_timetable_screen.dart';
 
 class TimetableScreen extends StatefulWidget {
   const TimetableScreen({super.key});
@@ -63,7 +65,11 @@ class _TimetableScreenState extends State<TimetableScreen> {
               // Weekly Timetable
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    bottom: 100, // Add padding for bottom navigation
+                  ),
                   itemCount: controller.timetable.length,
                   itemBuilder: (context, index) {
                     final day = controller.timetable[index];
@@ -75,7 +81,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
           );
         },
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -209,21 +214,21 @@ class _TimetableScreenState extends State<TimetableScreen> {
   }
 
   IconData _getDayIcon(String day) {
-    switch (day) {
-      case 'Monday':
-        return Icons.monday;
-      case 'Tuesday':
-        return Icons.tuesday;
-      case 'Wednesday':
-        return Icons.wednesday;
-      case 'Thursday':
-        return Icons.thursday;
-      case 'Friday':
-        return Icons.friday;
-      case 'Saturday':
-        return Icons.saturday;
-      case 'Sunday':
-        return Icons.sunday;
+    switch (day.toLowerCase()) {
+      case 'monday':
+        return Icons.calendar_today;
+      case 'tuesday':
+        return Icons.calendar_today;
+      case 'wednesday':
+        return Icons.calendar_today;
+      case 'thursday':
+        return Icons.calendar_today;
+      case 'friday':
+        return Icons.calendar_today;
+      case 'saturday':
+        return Icons.weekend;
+      case 'sunday':
+        return Icons.weekend;
       default:
         return Icons.calendar_today;
     }
@@ -246,39 +251,6 @@ class _TimetableScreenState extends State<TimetableScreen> {
       MaterialPageRoute(
         builder: (context) => const CreateTimetableScreen(),
       ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      backgroundColor: const Color(0xFF1F2937),
-      selectedItemColor: const Color(0xFFF59E0B),
-      unselectedItemColor: const Color(0xFF93C5FD),
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard),
-          label: 'Dashboard',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.schedule),
-          label: 'Timetable',
-        ),
-      ],
-      currentIndex: 2, // Timetable is selected
-      onTap: (index) {
-        // Handle navigation
-        if (index == 0) {
-          // Navigate to Home
-        } else if (index == 1) {
-          // Navigate to Dashboard
-        }
-        // index == 2 is current screen (Timetable)
-      },
     );
   }
 } 

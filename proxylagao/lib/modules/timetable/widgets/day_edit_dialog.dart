@@ -185,7 +185,7 @@ class _DayEditDialogState extends State<DayEditDialog> {
                               value: subject,
                               child: Text(subject, style: const TextStyle(color: Color(0xFFF9FAFB))),
                             );
-                          }).toList(),
+                          }),
                         ],
                         onChanged: (value) {
                           setState(() {
